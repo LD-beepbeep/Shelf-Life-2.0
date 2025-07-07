@@ -1,16 +1,735 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShelfLife</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#8b5cf6" />
-  <link rel="icon" href="icons/icon-192.png" />
+  <style>
+    :root {
+      --bg-light: #fff;
+      --fg-light: #222;
+      --bg-dark: #121212;
+      --fg-dark: #eee;
+      --accent: #007aff;
+      --danger: #d32f2f;
+      --danger-dark: #ff6b6b;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      background: var(--bg-light);
+      color: var(--fg-light);
+      transition: background-color 0.3s ease, color 0.3s ease;
+      user-select: none;
+    }
+
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--fg-dark);
+    }
+
+    nav.dock {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-around;
+      background: #222;
+      color: #ccc;
+      padding: 10px 0;
+      border-top: 1px solid #444;
+      user-select: none;
+      z-index: 10;
+    }
+
+    body.dark nav.dock {
+      background: #111;
+      color: #888;
+      border-top: 1px solid #444;
+    }
+
+    nav.dock button {
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 28px;
+      cursor: pointer;
+      padding: 5px 15px;
+      transition: color 0.2s;
+      outline-offset: 2px;
+      border-radius: 5px;
+    }
+
+    nav.dock button:hover,
+    nav.dock button:focus {
+      color: var(--accent);
+      outline: none;
+      background: transparent;
+    }
+
+    nav.dock button.active {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    main#content {
+      padding: 20px;
+      margin-bottom: 60px;
+      min-height: calc(100vh - 80px);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-weight: 600;
+      font-size: 1.8rem;
+    }
+
+    /* Forms */
+    form {
+      max-width: 400px;
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    label {
+      font-weight: 600;
+      user-select: none;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+      padding: 8px 12px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: transparent;
+      color: inherit;
+      transition: border-color 0.2s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    button[type="submit"] {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px 0;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+
+    button[type="submit"]:hover,
+    button[type="submit"]:focus {
+      background: #005bb5;
+      outline: none;
+    }
+
+    /* List */
+    ul.item-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0 0;
+      max-width: 600px;
+    }
+
+    ul.item-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      background: #f2f2f2;
+      color: #222;
+      font-weight: 500;
+      user-select: text;
+      transition: background-color 0.2s;
+    }
+
+    body.dark ul.item-list li {
+      background: #1e1e1e;
+      color: #eee;
+    }
+
+    ul.item-list li.expired {
+      background: var(--danger);
+      color: white;
+      font-weight: 700;
+    }
+
+    body.dark ul.item-list li.expired {
+      background: var(--danger-dark);
+      color: white;
+    }
+
+    ul.item-list li button.delete-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--danger);
+      padding: 0;
+      margin-left: 10px;
+      transition: color 0.2s;
+      user-select: none;
+    }
+
+    ul.item-list li button.delete-btn:hover,
+    ul.item-list li button.delete-btn:focus {
+      color: #a30000;
+      outline: none;
+    }
+
+    /* Autocomplete dropdown */
+    .autocomplete-list {
+      border: 1px solid #ccc;
+      border-top: none;
+      max-height: 140px;
+      overflow-y: auto;
+      background: var(--bg-light);
+      color: var(--fg-light);
+      position: absolute;
+      width: calc(100% - 24px);
+      z-index: 10;
+      border-radius: 0 0 6px 6px;
+      box-sizing: border-box;
+    }
+
+    body.dark .autocomplete-list {
+      background: var(--bg-dark);
+      color: var(--fg-dark);
+      border-color: #444;
+    }
+
+    .autocomplete-list div {
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 500;
+    }
+
+    .autocomplete-list div:hover,
+    .autocomplete-list div.active {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    /* Toggle dark mode switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      max-width: 400px;
+    }
+
+    .toggle-container label {
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      flex-grow: 1;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+      background: #ccc;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+      box-shadow: 0 0 2px rgba(0,0,0,0.2);
+    }
+
+    input[type="checkbox"] {
+      display: none;
+    }
+
+    input[type="checkbox"]:checked + .toggle-switch {
+      background: var(--accent);
+    }
+
+    input[type="checkbox"]:checked + .toggle-switch::after {
+      transform: translateX(24px);
+    }
+
+    /* Settings extra button */
+    button.clear-btn {
+      background: var(--danger);
+      color: white;
+      border: none;
+      padding: 12px 0;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      max-width: 400px;
+      margin-top: 10px;
+    }
+    button.clear-btn:hover, button.clear-btn:focus {
+      background: #a30000;
+      outline: none;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: var(--bg-light);
+      color: var(--fg-light);
+      max-width: 360px;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+      text-align: center;
+      user-select: text;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark .modal {
+      background: var(--bg-dark);
+      color: var(--fg-dark);
+      box-shadow: 0 6px 18px rgba(255,255,255,0.1);
+    }
+    .modal p {
+      margin: 1rem 0 1.5rem;
+      font-size: 1.1rem;
+    }
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .modal-buttons button {
+      padding: 10px 18px;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      font-weight: 600;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+    .modal-buttons button.confirm {
+      background: var(--danger);
+      color: white;
+    }
+    .modal-buttons button.confirm:hover,
+    .modal-buttons button.confirm:focus {
+      background: #a30000;
+      outline: none;
+    }
+    .modal-buttons button.cancel {
+      background: #ccc;
+      color: #222;
+    }
+    .modal-buttons button.cancel:hover,
+    .modal-buttons button.cancel:focus {
+      background: #999;
+      outline: none;
+    }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-  <div id="root"></div>
-  <script src="app.js"></script>
+<body>
+  <nav class="dock" role="navigation" aria-label="Main navigation">
+    <button data-page="home" class="active" aria-label="Home">🏠</button>
+    <button data-page="add" aria-label="Add Item">➕</button>
+    <button data-page="list" aria-label="List Items">📋</button>
+    <button data-page="settings" aria-label="Settings">⚙️</button>
+  </nav>
+
+  <main id="content" role="main">
+    <!-- Page content gets loaded here -->
+  </main>
+
+  <script>
+    (() => {
+      const content = document.getElementById('content');
+      const navButtons = document.querySelectorAll('nav.dock button');
+      let items = JSON.parse(localStorage.getItem('shelfItems') || '[]');
+      let darkMode = JSON.parse(localStorage.getItem('shelfDarkMode') || 'false');
+
+      // Utility to format dates as yyyy-mm-dd
+      function formatDate(date) {
+        return date.toISOString().slice(0,10);
+      }
+
+      // Compare dates ignoring time
+      function dateDiffDays(d1, d2) {
+        const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+        return Math.floor(diff);
+      }
+
+      // Save items and dark mode settings to localStorage
+      function saveItems() {
+        localStorage.setItem('shelfItems', JSON.stringify(items));
+      }
+      function saveDarkMode() {
+        localStorage.setItem('shelfDarkMode', JSON.stringify(darkMode));
+      }
+
+      // Update body class based on dark mode
+      function updateDarkMode() {
+        if (darkMode) {
+          document.body.classList.add('dark');
+        } else {
+          document.body.classList.remove('dark');
+        }
+        saveDarkMode();
+      }
+
+      // Modal helper
+      function showModal(message, onConfirm, onCancel) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+
+        const p = document.createElement('p');
+        p.textContent = message;
+
+        const btnConfirm = document.createElement('button');
+        btnConfirm.textContent = 'Confirm';
+        btnConfirm.className = 'confirm';
+
+        const btnCancel = document.createElement('button');
+        btnCancel.textContent = 'Cancel';
+        btnCancel.className = 'cancel';
+
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'modal-buttons';
+        btnContainer.appendChild(btnConfirm);
+        btnContainer.appendChild(btnCancel);
+
+        modal.appendChild(p);
+        modal.appendChild(btnContainer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        btnConfirm.focus();
+
+        btnConfirm.onclick = () => {
+          onConfirm();
+          document.body.removeChild(overlay);
+        };
+        btnCancel.onclick = () => {
+          if(onCancel) onCancel();
+          document.body.removeChild(overlay);
+        };
+
+        // Close modal if click outside modal box
+        overlay.onclick = e => {
+          if(e.target === overlay) {
+            if(onCancel) onCancel();
+            document.body.removeChild(overlay);
+          }
+        };
+
+        // Keyboard support
+        overlay.onkeydown = e => {
+          if(e.key === 'Escape') {
+            if(onCancel) onCancel();
+            document.body.removeChild(overlay);
+          }
+        };
+      }
+
+      // Render the home page
+      function renderHome() {
+        // Sort items by expiry ascending
+        const today = new Date();
+        const expired = items.filter(i => new Date(i.expiry) < today);
+        const expiringSoon = items.filter(i => {
+          const diff = dateDiffDays(today, new Date(i.expiry));
+          return diff >= 0 && diff <= 2;
+        });
+
+        // Show max 3 expiring soon, max 3 expired
+        const expiredTop = expired.slice(0, 3);
+        const expiringTop = expiringSoon.slice(0, 3);
+
+        content.innerHTML = `
+          <h1>Home</h1>
+          <section>
+            <h2>Expired Items</h2>
+            ${expiredTop.length ? 
+              `<ul class="item-list">${expiredTop.map((item,i) => `
+                <li class="expired">
+                  <span>${item.name} (Expired ${formatDate(new Date(item.expiry))})</span>
+                </li>`).join('')}</ul>`
+              : `<p>No expired items! 🎉</p>`
+            }
+          </section>
+          <section>
+            <h2>Expiring Soon (within 2 days)</h2>
+            ${expiringTop.length ?
+              `<ul class="item-list">${expiringTop.map((item,i) => `
+                <li>
+                  <span>${item.name} (Expires ${formatDate(new Date(item.expiry))})</span>
+                </li>`).join('')}</ul>`
+              : `<p>No items expiring soon!</p>`
+            }
+          </section>
+          <section>
+            <h2>Statistics</h2>
+            <p>Total items: ${items.length}</p>
+            <p>Expired: ${expired.length}</p>
+            <p>Expiring soon: ${expiringSoon.length}</p>
+          </section>
+        `;
+      }
+
+      // Render add form with autocomplete on product name
+      function renderAdd() {
+        content.innerHTML = `
+          <h1>Add Item</h1>
+          <form id="add-form" autocomplete="off" novalidate>
+            <label for="name">Product Name</label>
+            <input type="text" id="name" name="name" placeholder="Milk" required />
+            <div id="autocomplete-list" class="autocomplete-list" hidden></div>
+
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="" disabled selected>Select category</option>
+              <option value="Dairy">Dairy</option>
+              <option value="Vegetables">Vegetables</option>
+              <option value="Fruits">Fruits</option>
+              <option value="Meat">Meat</option>
+              <option value="Beverages">Beverages</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <label for="expiry">Expiry Date</label>
+            <input type="date" id="expiry" name="expiry" required min="${formatDate(new Date())}" />
+
+            <button type="submit">Add Product</button>
+          </form>
+        `;
+
+        const form = document.getElementById('add-form');
+        const nameInput = form.elements['name'];
+        const categorySelect = form.elements['category'];
+        const expiryInput = form.elements['expiry'];
+        const autocompleteList = document.getElementById('autocomplete-list');
+
+        // Autocomplete logic
+        nameInput.addEventListener('input', () => {
+          const val = nameInput.value.trim().toLowerCase();
+          if (!val) {
+            autocompleteList.hidden = true;
+            return;
+          }
+          // Get unique product names from items that start with input
+          const matches = [...new Set(items.map(i => i.name))]
+            .filter(n => n.toLowerCase().startsWith(val))
+            .slice(0, 5);
+          if (matches.length === 0) {
+            autocompleteList.hidden = true;
+            return;
+          }
+          autocompleteList.innerHTML = matches.map(m => `<div tabindex="0">${m}</div>`).join('');
+          autocompleteList.hidden = false;
+        });
+
+        autocompleteList.addEventListener('click', e => {
+          if (e.target.tagName === 'DIV') {
+            nameInput.value = e.target.textContent;
+            autocompleteList.hidden = true;
+            // Optionally fill category from first matching item with that name
+            const matchItem = items.find(i => i.name.toLowerCase() === nameInput.value.toLowerCase());
+            if (matchItem) {
+              categorySelect.value = matchItem.category;
+            }
+          }
+        });
+
+        // Keyboard navigation for autocomplete
+        let currentFocus = -1;
+        nameInput.addEventListener('keydown', e => {
+          const itemsDiv = autocompleteList.querySelectorAll('div');
+          if (autocompleteList.hidden || itemsDiv.length === 0) return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            currentFocus++;
+            if (currentFocus >= itemsDiv.length) currentFocus = 0;
+            itemsDiv.forEach((el,i) => el.classList.toggle('active', i === currentFocus));
+            itemsDiv[currentFocus].focus();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            currentFocus--;
+            if (currentFocus < 0) currentFocus = itemsDiv.length -1;
+            itemsDiv.forEach((el,i) => el.classList.toggle('active', i === currentFocus));
+            itemsDiv[currentFocus].focus();
+          } else if (e.key === "Enter") {
+            if (currentFocus > -1) {
+              e.preventDefault();
+              nameInput.value = itemsDiv[currentFocus].textContent;
+              autocompleteList.hidden = true;
+              const matchItem = items.find(i => i.name.toLowerCase() === nameInput.value.toLowerCase());
+              if (matchItem) {
+                categorySelect.value = matchItem.category;
+              }
+            }
+          }
+        });
+
+        // Hide autocomplete if clicking outside
+        document.addEventListener('click', (e) => {
+          if (!autocompleteList.contains(e.target) && e.target !== nameInput) {
+            autocompleteList.hidden = true;
+          }
+        });
+
+        // Form submit logic
+        form.addEventListener('submit', e => {
+          e.preventDefault();
+          const nameVal = nameInput.value.trim();
+          const categoryVal = categorySelect.value;
+          const expiryVal = expiryInput.value;
+
+          if (!nameVal || !categoryVal || !expiryVal) {
+            alert('Please fill in all fields.');
+            return;
+          }
+
+          // Check if expiry is in the future or today
+          if (new Date(expiryVal) < new Date(formatDate(new Date()))) {
+            alert('Expiry date cannot be in the past.');
+            return;
+          }
+
+          items.push({name: nameVal, category: categoryVal, expiry: expiryVal});
+          saveItems();
+          alert(`Added "${nameVal}"!`);
+          form.reset();
+          categorySelect.value = "";
+          autocompleteList.hidden = true;
+        });
+      }
+
+      // Render list page with delete buttons
+      function renderList() {
+        if (items.length === 0) {
+          content.innerHTML = `<h1>List Items</h1><p>No items added yet.</p>`;
+          return;
+        }
+
+        content.innerHTML = `
+          <h1>List Items</h1>
+          <ul class="item-list" role="list">
+            ${items.map((item, idx) => {
+              const expired = new Date(item.expiry) < new Date();
+              return `
+                <li class="${expired ? 'expired' : ''}">
+                  <span>${item.name} (${item.category}) - expires: ${formatDate(new Date(item.expiry))}</span>
+                  <button class="delete-btn" aria-label="Delete ${item.name}" data-index="${idx}">🗑️</button>
+                </li>`;
+            }).join('')}
+          </ul>
+        `;
+
+        document.querySelectorAll('button.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = +btn.dataset.index;
+            showModal(`Delete "${items[idx].name}"?`, () => {
+              items.splice(idx, 1);
+              saveItems();
+              renderList();
+            });
+          });
+        });
+      }
+
+      // Render settings page with dark mode toggle and clear all button
+      function renderSettings() {
+        content.innerHTML = `
+          <h1>Settings</h1>
+          <div class="toggle-container">
+            <label for="darkmode-toggle">Dark Mode</label>
+            <input type="checkbox" id="darkmode-toggle" ${darkMode ? 'checked' : ''} />
+            <span class="toggle-switch" aria-hidden="true"></span>
+          </div>
+          <button class="clear-btn" id="clear-all-btn">Clear All Items</button>
+        `;
+
+        // Dark mode toggle logic
+        const toggle = document.getElementById('darkmode-toggle');
+        toggle.addEventListener('change', () => {
+          darkMode = toggle.checked;
+          updateDarkMode();
+        });
+
+        // Clear all button
+        document.getElementById('clear-all-btn').addEventListener('click', () => {
+          showModal('Are you sure you want to clear all items? This cannot be undone.', () => {
+            items = [];
+            saveItems();
+            renderSettings(); // refresh to disable clear btn etc.
+          });
+        });
+      }
+
+      // Main navigation handler
+      navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          navButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderPage(btn.dataset.page);
+        });
+      });
+
+      function renderPage(page) {
+        switch (page) {
+          case 'home': renderHome(); break;
+          case 'add': renderAdd(); break;
+          case 'list': renderList(); break;
+          case 'settings': renderSettings(); break;
+        }
+      }
+
+      updateDarkMode();
+      renderPage('home');
+    })();
+  </script>
 </body>
 </html>
